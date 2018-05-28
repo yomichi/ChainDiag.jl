@@ -1,5 +1,3 @@
-module ChainLattice
-
 @inline ldof(S) = Int(2S+1)
 function Sp(S::Real)
     S2 = Int(2S)
@@ -34,15 +32,15 @@ function Sz(S, L, i)
     kron(eye(leftN), kron(Sz(S), eye(rightN)))
 end
 
-function Mz(S,L)
+function totalSz(S,L; staggered::Bool=false)
     sz = Sz(S)
     S2 = Int(2S)
     ld = ldof(S)
     N = ld^L
     res = zeros(N)
     for i in 1:N
-        for m in digits(i,ld)
-            res[i] += 0.5sz[m+1,m+1]
+        for (j,m) in enumerate(digits(i-1,ld,L))
+            res[i] += sz[m+1,m+1] * ifelse(staggered && iseven(j), -1.0, 1.0)
         end
     end
     return diagm(res)
@@ -75,13 +73,11 @@ struct SpinChainSolver
     ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     S :: Float64
     L :: Int
-    Jz :: Float64
-    Jxy :: Float64
-    SpinChainSolver(S, L, Jz, Jxy) = new(eigfact(spinchain(S, L, Jz, Jxy)), S, L, Jz, Jxy)
+    SpinChainSolver(S, L, Jz, Jxy) = new(eigfact(spinchain(S, L, Jz, Jxy)), S, L)
 end
 
 
-function calculate(H::SpinChainSolver, beta::Real, ntau::Integer)
+function solve(H::SpinChainSolver, beta::Real, ntau::Integer)
     S = H.S
     L = H.L
     ef = H.ef
@@ -103,12 +99,17 @@ function calculate(H::SpinChainSolver, beta::Real, ntau::Integer)
     C = L*beta^2*(E2-E^2)
 
     rho = diagm(exp.(-beta.*ef.values))
-    mz = ef.vectors' * Mz(S,L) * ef.vectors
+    mz = ef.vectors' * totalSz(S,L) * ef.vectors
     mz2 = mz*mz
     M = trace(mz*rho)*invZ*invV
     M2 = trace(mz2*rho)*invZ*invV^2
-
     chi = L*beta*(M2-M^2)
+
+    mz .= ef.vectors' * totalSz(S,L, staggered=true) * ef.vectors
+    mz2 .= mz*mz
+    stagM = trace(mz*rho)*invZ*invV
+    stagM2 = trace(mz2*rho)*invZ*invV^2
+    stagchi = L*beta*(stagM2-stagM^2)
 
     for it in 1:ntau
         t1 = beta*((it-1)/ntau)
@@ -132,8 +133,9 @@ function calculate(H::SpinChainSolver, beta::Real, ntau::Integer)
                 "Magnetization"=>M, "Total Magnetization"=>M*L,
                 "Magnetization^2"=>M2, "Total Magnetization^2"=>M2*V2,
                 "Susceptibility"=>chi,
+                "Staggered Magnetization"=>stagM, "Total Staggered Magnetization"=>stagM*L,
+                "Staggered Magnetization^2"=>stagM2, "Total Staggered Magnetization^2"=>stagM2*V2,
+                "Staggered Susceptibility"=>stagchi,
                 "Structure Factor"=>SS,
                )
 end
-
-end # of module SpinChain
