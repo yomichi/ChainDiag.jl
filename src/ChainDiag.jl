@@ -1,3 +1,5 @@
+__precompile__()
+
 module ChainDiag
 
 export SpinChainSolver, BosonChainSolver, solve
