@@ -32,7 +32,7 @@ function number(M::Integer, L::Integer, i::Integer)
     kron(eye(leftN), kron(number(M), eye(rightN)))
 end
 
-function totalnumber(M::Integer,L::Integer; staggered::Bool=false)
+function numberdensity(M::Integer,L::Integer,staggered::Bool=false)
     ld = M+1
     N = ld^L
     n = number(M)
@@ -42,6 +42,7 @@ function totalnumber(M::Integer,L::Integer; staggered::Bool=false)
             res[i] += n[m+1,m+1] * ifelse(staggered && iseven(j), -1.0, 1.0)
         end
     end
+    res .*= 1.0/L
     return diagm(res)
 end
 
@@ -75,75 +76,18 @@ end
 doc"""
 \mathcal{H} = -t\sum_i(a_i c_{i+1} + c_i a_{i+1}) + V\sum_i n_i n_{i+1} + U \sum_i n_i(n_i-1) - mu \sum_i n_i
 """
-struct BosonChainSolver
+struct BosonChainSolver <: Solver
     ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     M :: Int
     L :: Int
-    BosonChainSolver(M::Integer, L::Integer, t::Real, V::Real, U::Real, mu::Real) = new(eigfact(bosonchain(M, L, t, V, U, mu)), M, L)
+    BosonChainSolver(M::Integer, L::Integer; t::Real=1.0, V::Real=0.0, U::Real=0.0, mu::Real=0.0) = new(eigfact(bosonchain(M, L, t, V, U, mu)), M, L)
 end
 
-function solve(H::BosonChainSolver, beta::Real, ntau::Integer)
-    M = H.M
-    L = H.L
-    ef = H.ef
-    nk = length(0:2:L)
-    SF = zeros(nk, ntau)
-    CF = zeros(L, ntau)
-    Z = 0.0
-    E = 0.0
-    E2 = 0.0
-    invV = 1.0/L
-    for en in reverse(ef.values)
-        z = exp(-beta*en)
-        Z += z
-        E += z*(en*invV)
-        E2 += z*(en*invV)^2
-    end
-    invZ = 1.0/Z
-    E *= invZ
-    E2 *= invZ
-    C = L*beta^2*(E2-E^2)
+creator(solver::BosonChainSolver) = creator(solver.M)
+creator(solver::BosonChainSolver, i::Integer) = creator(solver.M, solver.L, i)
+annihilator(solver::BosonChainSolver) = annihilator(solver.M)
+annihilator(solver::BosonChainSolver, i::Integer) = annihilator(solver.M, solver.L, i)
+basis(solver::BosonChainSolver) = number(solver.M)
+basis(solver::BosonChainSolver, i::Integer) = number(solver.M, solver.L, i)
+orderparameter(solver::BosonChainSolver, staggered::Bool=false) = numberdensity(solver.M, solver.L, staggered)
 
-    rho = diagm(exp.(-beta.*ef.values))
-    n = ef.vectors' * totalnumber(M,L) * ef.vectors
-    n2 = n*n
-    N = trace(n*rho)*invZ*invV
-    N2 = trace(n2*rho)*invZ*invV^2
-    chi = L*beta*(N2-N^2)
-
-    n = ef.vectors' * totalnumber(M,L, staggered=true) * ef.vectors
-    n2 = n*n
-    stagN = trace(n*rho)*invZ*invV
-    stagN2 = trace(n2*rho)*invZ*invV^2
-    stagchi = L*beta*(stagN2-stagN^2)
-
-    for it in 1:ntau
-        t1 = beta*((it-1)/ntau)
-        t2 = beta-t1
-        U1 = ef.vectors * diagm(exp.(-t1.*ef.values)) * ef.vectors'
-        U2 = ef.vectors * diagm(exp.(-t2.*ef.values)) * ef.vectors'
-        for i in 1:L
-            A = U2*number(M, L,i)*U1
-            B = U2*creator(M, L,i)*U1
-            for j in 1:L
-                ss = invZ * trace(A * number(M, L,j))
-                for (ik,k) in enumerate(0:2:L)
-                    SF[ik,it] += invV * cospi(k*invV*(i-j)) * ss
-                end
-                CF[mod(i-j,L)+1, it] += invZ * trace(B * annihilator(M, L,j))
-            end
-        end
-    end
-    V2 = L*L
-    return Dict("Energy"=>E, "Total Energy"=>E*L,
-                "Energy^2"=>E2, "Total Energy^2"=>E2*V2,
-                "Specific Heat"=>C, "Heat Capacity"=>C*L,
-                "Number Density"=>N, "Number of Particles"=>N*L,
-                "Number Density^2"=>N2, "Number of Particles^2"=>N2*V2,
-                "Susceptibility"=>chi,
-                "Staggered Number Density"=>stagN, "Staggered Number of Particles"=>stagN*L,
-                "Staggered Number Density^2"=>stagN2, "Staggered Number of Particles^2"=>stagN2*V2,
-                "Staggered Susceptibility"=>stagchi,
-                "Structure Factor"=>SF, "Correlation Function"=>CF,
-               )
-end

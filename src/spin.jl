@@ -1,10 +1,10 @@
-@inline ldof(S) = Int(2S+1)
+@inline ldof(S::Real) = Int(2S+1)
 function Sp(S::Real)
     S2 = Int(2S)
     ret = [0.5sqrt((S2-m2)*(S2+m2+2) ) for m2 in (S2-2):-2:(-S2)]
     return diagm(ret,1)
 end
-function Sp(S, L, i)
+function Sp(S::Real, L::Integer, i::Integer)
     leftN = ldof(S)^(i-1)
     rightN = ldof(S)^(L-i)
     kron(eye(leftN), kron(Sp(S), eye(rightN)))
@@ -15,7 +15,7 @@ function Sm(S::Real)
     ret = [0.5sqrt((S2+m2)*(S2-m2+2) ) for m2 in (S2):-2:(-S2+2)]
     return diagm(ret,-1)
 end
-function Sm(S, L, i)
+function Sm(S::Real, L::Integer, i::Integer)
     leftN = ldof(S)^(i-1)
     rightN = ldof(S)^(L-i)
     kron(eye(leftN), kron(Sm(S), eye(rightN)))
@@ -26,13 +26,13 @@ function Sz(S::Real)
     ret = [0.5m2 for m2 in S2:-2:-S2]
     return diagm(ret)
 end
-function Sz(S, L, i)
+function Sz(S::Real, L::Integer, i::Integer)
     leftN = ldof(S)^(i-1)
     rightN = ldof(S)^(L-i)
     kron(eye(leftN), kron(Sz(S), eye(rightN)))
 end
 
-function totalSz(S,L; staggered::Bool=false)
+function magnetization(S::Real,L::Integer,staggered::Bool=false)
     sz = Sz(S)
     S2 = Int(2S)
     ld = ldof(S)
@@ -43,10 +43,11 @@ function totalSz(S,L; staggered::Bool=false)
             res[i] += sz[m+1,m+1] * ifelse(staggered && iseven(j), -1.0, 1.0)
         end
     end
+    res .*= 1.0/L
     return diagm(res)
 end
 
-function spinchain(S, L, Jz, Jxy, h)
+function spinchain(S::Real, L::Integer, Jz::Real, Jxy::Real, h::Real)
     S2 = Int(2S)
     ld = ldof(S)
     sz = Sz(S)
@@ -74,76 +75,18 @@ end
 doc"""
 \mathcal{H} = Jz \sum_i(S^z_i S^z_{i+1}) + 0.5Jxy \sum_i(S^+_i S^-_{i+1} + h.c.) - h \sum_i S^z_i
 """
-struct SpinChainSolver
+struct SpinChainSolver <: Solver
     ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     S :: Float64
     L :: Int
-    SpinChainSolver(S, L, Jz, Jxy, h) = new(eigfact(spinchain(S, L, Jz, Jxy, h)), S, L)
+    SpinChainSolver(S::Real, L::Integer; Jz::Real=1.0, Jxy::Real=1.0, h::Real=0.0) = new(eigfact(spinchain(S, L, Jz, Jxy, h)), S, L)
 end
 
+creator(solver::SpinChainSolver) = Sp(solver.S)
+creator(solver::SpinChainSolver, i::Integer) = Sp(solver.S, solver.L, i)
+annihilator(solver::SpinChainSolver) = Sm(solver.S)
+annihilator(solver::SpinChainSolver, i::Integer) = Sm(solver.S, solver.L, i)
+basis(solver::SpinChainSolver) = Sz(solver.S)
+basis(solver::SpinChainSolver, i::Integer) = Sz(solver.S, solver.L, i)
+orderparameter(solver::SpinChainSolver, staggered::Bool=false) = magnetization(solver.S, solver.L, staggered)
 
-function solve(H::SpinChainSolver, beta::Real, ntau::Integer)
-    S = H.S
-    L = H.L
-    ef = H.ef
-    nk = length(0:2:L)
-    SF = zeros(nk, ntau)
-    CF = zeros(L, ntau)
-    Z = 0.0
-    E = 0.0
-    E2 = 0.0
-    invV = 1.0/L
-    for en in reverse(ef.values)
-        z = exp(-beta*en)
-        Z += z
-        E += z*(en*invV)
-        E2 += z*(en*invV)^2
-    end
-    invZ = 1.0/Z
-    E *= invZ
-    E2 *= invZ
-    C = L*beta^2*(E2-E^2)
-
-    rho = diagm(exp.(-beta.*ef.values))
-    mz = ef.vectors' * totalSz(S,L) * ef.vectors
-    mz2 = mz*mz
-    M = trace(mz*rho)*invZ*invV
-    M2 = trace(mz2*rho)*invZ*invV^2
-    chi = L*beta*(M2-M^2)
-
-    mz .= ef.vectors' * totalSz(S,L, staggered=true) * ef.vectors
-    mz2 .= mz*mz
-    stagM = trace(mz*rho)*invZ*invV
-    stagM2 = trace(mz2*rho)*invZ*invV^2
-    stagchi = L*beta*(stagM2-stagM^2)
-
-    for it in 1:ntau
-        t1 = beta*((it-1)/ntau)
-        t2 = beta-t1
-        U1 = ef.vectors * diagm(exp.(-t1.*ef.values)) * ef.vectors'
-        U2 = ef.vectors * diagm(exp.(-t2.*ef.values)) * ef.vectors'
-        for i in 1:L
-            A = U2*Sz(S, L,i)*U1
-            B = U2*Sp(S, L,i)*U1
-            for j in 1:L
-                sf = invZ * trace(A * Sz(S, L,j))
-                for (ik,k) in enumerate(0:2:L)
-                    SF[ik,it] += invV * cospi(k*invV*(i-j)) * ss
-                end
-                CF[mod(i-j,L)+1, it] = invZ * trace(B * Sm(S, L,j))
-            end
-        end
-    end
-    V2 = L*L
-    return Dict("Energy"=>E, "Total Energy"=>E*L,
-                "Energy^2"=>E2, "Total Energy^2"=>E2*V2,
-                "Specific Heat"=>C, "Heat Capacity"=>C*L,
-                "Magnetization"=>M, "Total Magnetization"=>M*L,
-                "Magnetization^2"=>M2, "Total Magnetization^2"=>M2*V2,
-                "Susceptibility"=>chi,
-                "Staggered Magnetization"=>stagM, "Total Staggered Magnetization"=>stagM*L,
-                "Staggered Magnetization^2"=>stagM2, "Total Staggered Magnetization^2"=>stagM2*V2,
-                "Staggered Susceptibility"=>stagchi,
-                "Structure Factor"=>SF, "Correlation Function"=>CF,
-               )
-end
