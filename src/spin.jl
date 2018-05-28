@@ -87,7 +87,8 @@ function solve(H::SpinChainSolver, beta::Real, ntau::Integer)
     L = H.L
     ef = H.ef
     nk = length(0:2:L)
-    SS = zeros(nk, ntau)
+    SF = zeros(nk, ntau)
+    CF = zeros(L, ntau)
     Z = 0.0
     E = 0.0
     E2 = 0.0
@@ -123,11 +124,13 @@ function solve(H::SpinChainSolver, beta::Real, ntau::Integer)
         U2 = ef.vectors * diagm(exp.(-t2.*ef.values)) * ef.vectors'
         for i in 1:L
             A = U2*Sz(S, L,i)*U1
+            B = U2*Sp(S, L,i)*U1
             for j in 1:L
-                ss = invZ * trace(A * Sz(S, L,j))
+                sf = invZ * trace(A * Sz(S, L,j))
                 for (ik,k) in enumerate(0:2:L)
-                    SS[ik,it] += invV * cospi(k*invV*(i-j)) * ss
+                    SF[ik,it] += invV * cospi(k*invV*(i-j)) * ss
                 end
+                CF[mod(i-j,L)+1, it] = invZ * trace(B * Sm(S, L,j))
             end
         end
     end
@@ -141,6 +144,6 @@ function solve(H::SpinChainSolver, beta::Real, ntau::Integer)
                 "Staggered Magnetization"=>stagM, "Total Staggered Magnetization"=>stagM*L,
                 "Staggered Magnetization^2"=>stagM2, "Total Staggered Magnetization^2"=>stagM2*V2,
                 "Staggered Susceptibility"=>stagchi,
-                "Structure Factor"=>SS,
+                "Structure Factor"=>SF, "Correlation Function"=>CF,
                )
 end

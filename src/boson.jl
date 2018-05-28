@@ -87,7 +87,8 @@ function solve(H::BosonChainSolver, beta::Real, ntau::Integer)
     L = H.L
     ef = H.ef
     nk = length(0:2:L)
-    SS = zeros(nk, ntau)
+    SF = zeros(nk, ntau)
+    CF = zeros(L, ntau)
     Z = 0.0
     E = 0.0
     E2 = 0.0
@@ -123,11 +124,13 @@ function solve(H::BosonChainSolver, beta::Real, ntau::Integer)
         U2 = ef.vectors * diagm(exp.(-t2.*ef.values)) * ef.vectors'
         for i in 1:L
             A = U2*number(M, L,i)*U1
+            B = U2*creator(M, L,i)*U1
             for j in 1:L
                 ss = invZ * trace(A * number(M, L,j))
                 for (ik,k) in enumerate(0:2:L)
-                    SS[ik,it] += invV * cospi(k*invV*(i-j)) * ss
+                    SF[ik,it] += invV * cospi(k*invV*(i-j)) * ss
                 end
+                CF[mod(i-j,L)+1, it] += invZ * trace(B * annihilator(M, L,j))
             end
         end
     end
@@ -141,6 +144,6 @@ function solve(H::BosonChainSolver, beta::Real, ntau::Integer)
                 "Staggered Number Density"=>stagN, "Staggered Number of Particles"=>stagN*L,
                 "Staggered Number Density^2"=>stagN2, "Staggered Number of Particles^2"=>stagN2*V2,
                 "Staggered Susceptibility"=>stagchi,
-                "Structure Factor"=>SS,
+                "Structure Factor"=>SF, "Correlation Function"=>CF,
                )
 end
