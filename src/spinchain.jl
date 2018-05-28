@@ -1,4 +1,4 @@
-module SpinChain
+module ChainLattice
 
 @inline ldof(S) = Int(2S+1)
 function Sp(S::Real)
@@ -48,7 +48,7 @@ function Mz(S,L)
     return diagm(res)
 end
 
-function H(S, L, Jz, Jxy)
+function spinchain(S, L, Jz, Jxy)
     S2 = Int(2S)
     ld = ldof(S)
     sz = Sz(S)
@@ -71,17 +71,17 @@ function H(S, L, Jz, Jxy)
     return H
 end
 
-struct Hamiltonian
+struct SpinChainSolver
     ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     S :: Float64
     L :: Int
     Jz :: Float64
     Jxy :: Float64
-    Hamiltonian(S, L, Jz, Jxy) = new(eigfact(H(S, L, Jz, Jxy)), S, L, Jz, Jxy)
+    SpinChainSolver(S, L, Jz, Jxy) = new(eigfact(spinchain(S, L, Jz, Jxy)), S, L, Jz, Jxy)
 end
 
 
-function calculate(H::Hamiltonian, beta::Real, ntau::Integer)
+function calculate(H::SpinChainSolver, beta::Real, ntau::Integer)
     S = H.S
     L = H.L
     ef = H.ef
