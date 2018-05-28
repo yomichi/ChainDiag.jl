@@ -72,13 +72,15 @@ function bosonchain(M::Integer, L::Integer, t::Real, V::Real, U::Real, mu::Real)
     return H
 end
 
+doc"""
+\mathcal{H} = -t\sum_i(a_i c_{i+1} + c_i a_{i+1}) + V\sum_i n_i n_{i+1} + U \sum_i n_i(n_i-1) - mu \sum_i n_i
+"""
 struct BosonChainSolver
     ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     M :: Int
     L :: Int
     BosonChainSolver(M::Integer, L::Integer, t::Real, V::Real, U::Real, mu::Real) = new(eigfact(bosonchain(M, L, t, V, U, mu)), M, L)
 end
-
 
 function solve(H::BosonChainSolver, beta::Real, ntau::Integer)
     M = H.M

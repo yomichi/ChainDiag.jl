@@ -46,18 +46,20 @@ function totalSz(S,L; staggered::Bool=false)
     return diagm(res)
 end
 
-function spinchain(S, L, Jz, Jxy)
+function spinchain(S, L, Jz, Jxy, h)
     S2 = Int(2S)
     ld = ldof(S)
     sz = Sz(S)
     sp = Sp(S)
     sm = Sm(S)
     jxy = 0.5Jxy
-    bondH = Jz.*kron(sz,sz) .+ jxy.*(kron(sp,sm) .+ kron(sm,sp))
+    bondH = Jz.*kron(sz,sz) .+ jxy.*(kron(sp,sm) .+ kron(sm,sp)) - (0.5h).*(kron(sz, eye(ld)) .+ kron(eye(ld), sz))
     N = ld^L
     H = Jz.*kron(sz, kron(eye(div(N,ld*ld)), sz))
     H .+= jxy .* kron(sm, kron(eye(div(N,ld*ld)), sp))
     H .+= jxy .* kron(sp, kron(eye(div(N,ld*ld)), sm))
+    H .+= (-0.5h) .* kron(sz, eye(div(N,ld)))
+    H .+= (-0.5h) .* kron(eye(div(N,ld)), sz)
 
     leftN = 1
     rightN = ld^(L-2)
@@ -69,11 +71,14 @@ function spinchain(S, L, Jz, Jxy)
     return H
 end
 
+doc"""
+\mathcal{H} = Jz \sum_i(S^z_i S^z_{i+1}) + 0.5Jxy \sum_i(S^+_i S^-_{i+1} + h.c.) - h \sum_i S^z_i
+"""
 struct SpinChainSolver
     ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     S :: Float64
     L :: Int
-    SpinChainSolver(S, L, Jz, Jxy) = new(eigfact(spinchain(S, L, Jz, Jxy)), S, L)
+    SpinChainSolver(S, L, Jz, Jxy, h) = new(eigfact(spinchain(S, L, Jz, Jxy, h)), S, L)
 end
 
 
