@@ -14,7 +14,8 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
     ef = solver.ef
     nk = length(0:2:L)
     SF = zeros(nk, ntau)
-    CF = zeros(L, ntau)
+    GF_ca = zeros(L, ntau)
+    GF_ac = zeros(L, ntau)
     Z = 0.0
     E = 0.0
     E2 = 0.0
@@ -33,14 +34,14 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
     rho = diagm(exp.(-beta.*ef.values))
     n = ef.vectors' * orderparameter(solver) * ef.vectors
     n2 = n*n
-    N = trace(n*rho)*invZ*invV
-    N2 = trace(n2*rho)*invZ*invV^2
+    N = trace(n*rho)*invZ
+    N2 = trace(n2*rho)*invZ
     chi = L*beta*(N2-N^2)
 
     n = ef.vectors' * orderparameter(solver,true) * ef.vectors
     n2 = n*n
-    stagN = trace(n*rho)*invZ*invV
-    stagN2 = trace(n2*rho)*invZ*invV^2
+    stagN = trace(n*rho)*invZ
+    stagN2 = trace(n2*rho)*invZ
     stagchi = L*beta*(stagN2-stagN^2)
 
     for it in 1:ntau
@@ -49,15 +50,15 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
         U1 = ef.vectors * diagm(exp.(-t1.*ef.values)) * ef.vectors'
         U2 = ef.vectors * diagm(exp.(-t2.*ef.values)) * ef.vectors'
         for i in 1:L
-            A = U2*basis(solver,i)*U1
-            B = U2*creator(solver,i)*U1
-            for j in 1:L
-                ss = invZ * trace(A * basis(solver,j))
-                for (ik,k) in enumerate(0:2:L)
-                    SF[ik,it] += invV * cospi(k*invV*(i-j)) * ss
-                end
-                CF[mod(i-j,L)+1, it] += invZ * trace(B * annihilator(solver,j))
+            sf = U2*basis(solver,i)*U1
+            gfca = U2*creator(solver,i)*U1
+            gfac = U2*annihilator(solver,i)*U1
+            ss = invZ * trace(sf * basis(solver,1))
+            for (ik,k) in enumerate(0:2:L)
+                SF[ik,it] += cospi(k*invV*(i-1)) * ss
             end
+            GF_ca[mod(i-1,L)+1, it] -= invZ * trace(gfca * annihilator(solver,1))
+            GF_ac[mod(i-1,L)+1, it] -= invZ * trace(gfac * creator(solver,1))
         end
     end
     V2 = L*L
@@ -68,7 +69,9 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
                 "Susceptibility"=>chi,
                 "Staggered Order Parameter"=>stagN, "Staggered Order Parameter^2"=>stagN2,
                 "Staggered Susceptibility"=>stagchi,
-                "Structure Factor"=>SF, "Correlation Function"=>CF,
+                "Structure Factor"=>SF,
+                "Temperature Green's Function ca"=>GF_ca,
+                "Temperature Green's Function ac"=>GF_ac,
                )
 end
 
