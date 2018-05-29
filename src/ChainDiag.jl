@@ -16,6 +16,8 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
     SF = zeros(nk, ntau)
     GF_ca = zeros(L, ntau)
     GF_ac = zeros(L, ntau)
+    GK_ca = zeros(nk, ntau)
+    GK_ac = zeros(nk, ntau)
     Z = 0.0
     E = 0.0
     E2 = 0.0
@@ -54,11 +56,14 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
             gfca = U2*creator(solver,i)*U1
             gfac = U2*annihilator(solver,i)*U1
             ss = invZ * trace(sf * basis(solver,1))
+            GF_ca[mod(i-1,L)+1, it] = -invZ * trace(gfca * annihilator(solver,1))
+            GF_ac[mod(i-1,L)+1, it] = -invZ * trace(gfac * creator(solver,1))
             for (ik,k) in enumerate(0:2:L)
-                SF[ik,it] += cospi(k*invV*(i-1)) * ss
+                fourier_factor = cospi(k*invV*(i-1))
+                SF[ik,it] += fourier_factor * ss
+                GK_ca[ik,it] += fourier_factor * GF_ca[mod(i-1,L)+1, it]
+                GK_ac[ik,it] += fourier_factor * GF_ac[mod(i-1,L)+1, it]
             end
-            GF_ca[mod(i-1,L)+1, it] -= invZ * trace(gfca * annihilator(solver,1))
-            GF_ac[mod(i-1,L)+1, it] -= invZ * trace(gfac * creator(solver,1))
         end
     end
     V2 = L*L
@@ -70,8 +75,10 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
                 "Staggered Order Parameter"=>stagN, "Staggered Order Parameter^2"=>stagN2,
                 "Staggered Susceptibility"=>stagchi,
                 "Structure Factor"=>SF,
-                "Temperature Green's Function ca"=>GF_ca,
-                "Temperature Green's Function ac"=>GF_ac,
+                "Temperature Green's Function ca in r"=>GF_ca,
+                "Temperature Green's Function ac in r"=>GF_ac,
+                "Temperature Green's Function ca in k"=>GK_ca,
+                "Temperature Green's Function ac in k"=>GK_ac,
                )
 end
 
