@@ -13,11 +13,11 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
     L = solver.L
     ef = solver.ef
     nk = length(0:2:L)
-    SF = zeros(nk, ntau)
-    GF_ca = zeros(L, ntau)
-    GF_ac = zeros(L, ntau)
-    GK_ca = zeros(nk, ntau)
-    GK_ac = zeros(nk, ntau)
+    SF = zeros(ntau, nk)
+    GF_ca = zeros(ntau, L)
+    GF_ac = zeros(ntau, L)
+    GK_ca = zeros(ntau, nk)
+    GK_ac = zeros(ntau, nk)
     Z = 0.0
     E = 0.0
     E2 = 0.0
@@ -56,13 +56,13 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
             gfca = U2*creator(solver,i)*U1
             gfac = U2*annihilator(solver,i)*U1
             ss = invZ * trace(sf * basis(solver,1))
-            GF_ca[mod(i-1,L)+1, it] = -invZ * trace(gfca * annihilator(solver,1))
-            GF_ac[mod(i-1,L)+1, it] = -invZ * trace(gfac * creator(solver,1))
+            GF_ca[it, mod(i-1,L)+1] = -invZ * trace(gfca * annihilator(solver,1))
+            GF_ac[it, mod(i-1,L)+1] = -invZ * trace(gfac * creator(solver,1))
             for (ik,k) in enumerate(0:2:L)
                 fourier_factor = cospi(k*invV*(i-1))
-                SF[ik,it] += fourier_factor * ss
-                GK_ca[ik,it] += fourier_factor * GF_ca[mod(i-1,L)+1, it]
-                GK_ac[ik,it] += fourier_factor * GF_ac[mod(i-1,L)+1, it]
+                SF[it,ik] += fourier_factor * ss
+                GK_ca[it,ik] += fourier_factor * GF_ca[it, mod(i-1,L)+1]
+                GK_ac[it,ik] += fourier_factor * GF_ac[it, mod(i-1,L)+1]
             end
         end
     end
