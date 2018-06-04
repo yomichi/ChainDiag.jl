@@ -47,20 +47,23 @@ function magnetization(S::Real,L::Integer,staggered::Bool=false)
     return diagm(res)
 end
 
-function spinchain(S::Real, L::Integer, Jz::Real, Jxy::Real, h::Real)
+function spinchain(S::Real, L::Integer, Jz::Real, Jxy::Real, h::Real, G::Real)
     S2 = Int(2S)
     ld = ldof(S)
     sz = Sz(S)
     sp = Sp(S)
     sm = Sm(S)
+    sx = sp+sm
     jxy = 0.5Jxy
-    bondH = Jz.*kron(sz,sz) .+ jxy.*(kron(sp,sm) .+ kron(sm,sp)) - (0.5h).*(kron(sz, eye(ld)) .+ kron(eye(ld), sz))
+
+    onsite = (-0.5h) .* sz .- (0.5G) .* sx
+    bondH = Jz.*kron(sz,sz) .+ jxy.*(kron(sp,sm) .+ kron(sm,sp)) .- kron(onsite, eye(ld)) .- kron(eye(ld), onsite)
     N = ld^L
     H = Jz.*kron(sz, kron(eye(div(N,ld*ld)), sz))
     H .+= jxy .* kron(sm, kron(eye(div(N,ld*ld)), sp))
     H .+= jxy .* kron(sp, kron(eye(div(N,ld*ld)), sm))
-    H .+= (-0.5h) .* kron(sz, eye(div(N,ld)))
-    H .+= (-0.5h) .* kron(eye(div(N,ld)), sz)
+    H .+= kron(onsite, eye(div(N,ld)))
+    H .+= kron(eye(div(N,ld)), onsite)
 
     leftN = 1
     rightN = ld^(L-2)
@@ -73,13 +76,19 @@ function spinchain(S::Real, L::Integer, Jz::Real, Jxy::Real, h::Real)
 end
 
 doc"""
-\mathcal{H} = Jz \sum_i(S^z_i S^z_{i+1}) + 0.5Jxy \sum_i(S^+_i S^-_{i+1} + h.c.) - h \sum_i S^z_i
+\mathcal{H} = Jz \sum_i(S^z_i S^z_{i+1}) + 0.5Jxy \sum_i(S^+_i S^-_{i+1} + h.c.) - h \sum_i S^z_i - G \sum_i S^x_i
 """
 struct SpinChainSolver <: Solver
     ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     S :: Float64
     L :: Int
-    SpinChainSolver(S::Real, L::Integer; Jz::Real=1.0, Jxy::Real=1.0, h::Real=0.0) = new(eigfact(spinchain(S, L, Jz, Jxy, h)), S, L)
+    function SpinChainSolver(S::Real, L::Integer
+                             ;
+                             Jz::Real=1.0, Jxy::Real=1.0,
+                             h::Real=0.0, G::Real=0.0
+                            )
+        new(eigfact(spinchain(S, L, Jz, Jxy, h, G)), S, L)
+    end
 end
 
 creator(solver::SpinChainSolver) = Sp(solver.S)

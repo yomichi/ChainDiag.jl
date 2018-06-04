@@ -46,14 +46,15 @@ function numberdensity(M::Integer,L::Integer,staggered::Bool=false)
     return diagm(res)
 end
 
-function bosonchain(M::Integer, L::Integer, t::Real, V::Real, U::Real, mu::Real)
+function bosonchain(M::Integer, L::Integer, t::Real, V::Real, U::Real, mu::Real, G::Real)
     ld = M+1
     c = creator(M)
     a = annihilator(M)
+    x = c+a
     n = number(M)
     i = eye(ld)
 
-    onsite = (-0.5mu).*n .+ (0.5U).*n.*(n.-1.0)
+    onsite = (-0.5mu).*n .+ (0.5U).*n.*(n.-1.0) .- G.*x
     bondH = V.*kron(n,n) .- t.*(kron(c,a) .+ kron(a,c)) .+ kron(onsite,i) .+ kron(i,onsite)
 
     N = ld^L
@@ -74,13 +75,19 @@ function bosonchain(M::Integer, L::Integer, t::Real, V::Real, U::Real, mu::Real)
 end
 
 doc"""
-\mathcal{H} = -t\sum_i(a_i c_{i+1} + c_i a_{i+1}) + V\sum_i n_i n_{i+1} + U \sum_i n_i(n_i-1) - mu \sum_i n_i
+\mathcal{H} = -t\sum_i(a_i c_{i+1} + c_i a_{i+1}) + V\sum_i n_i n_{i+1} + U \sum_i n_i(n_i-1) - mu \sum_i n_i - G \sum_i (c_i + a_i)
 """
 struct BosonChainSolver <: Solver
     ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     M :: Int
     L :: Int
-    BosonChainSolver(M::Integer, L::Integer; t::Real=1.0, V::Real=0.0, U::Real=0.0, mu::Real=0.0) = new(eigfact(bosonchain(M, L, t, V, U, mu)), M, L)
+    function BosonChainSolver(M::Integer, L::Integer
+                              ;
+                              t::Real=1.0, V::Real=0.0, U::Real=0.0,
+                              mu::Real=0.0, G::Real=0.0
+                             )
+        new(eigfact(bosonchain(M, L, t, V, U, mu, G)), M, L)
+    end
 end
 
 creator(solver::BosonChainSolver) = creator(solver.M)
