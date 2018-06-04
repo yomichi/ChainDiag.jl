@@ -53,11 +53,11 @@ function spinchain(S::Real, L::Integer, Jz::Real, Jxy::Real, h::Real, G::Real)
     sz = Sz(S)
     sp = Sp(S)
     sm = Sm(S)
-    sx = sp+sm
+    sx = 0.5.*(sp.+sm)
     jxy = 0.5Jxy
 
-    onsite = (-0.5h) .* sz .- (0.5G) .* sx
-    bondH = Jz.*kron(sz,sz) .+ jxy.*(kron(sp,sm) .+ kron(sm,sp)) .- kron(onsite, eye(ld)) .- kron(eye(ld), onsite)
+    onsite = (-0.5h) .* sz .+ (-0.5G) .* sx
+    bondH = Jz.*kron(sz,sz) .+ jxy.*(kron(sp,sm) .+ kron(sm,sp)) .+ kron(onsite, eye(ld)) .+ kron(eye(ld), onsite)
     N = ld^L
     H = Jz.*kron(sz, kron(eye(div(N,ld*ld)), sz))
     H .+= jxy .* kron(sm, kron(eye(div(N,ld*ld)), sp))
