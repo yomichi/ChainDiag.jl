@@ -9,7 +9,7 @@ abstract type Solver end
 include("spin.jl")
 include("boson.jl")
 
-function solve(solver::Solver, beta::Real, ntau::Integer)
+function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer=10*ntau)
     L = solver.L
     ef = solver.ef
     nk = length(0:2:L)
@@ -40,17 +40,36 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
     N2 = trace(n2*rho)*invZ
     chi = L*beta*(N2-N^2)
 
-    n = ef.vectors' * orderparameter(solver,true) * ef.vectors
-    n2 = n*n
-    stagN = trace(n*rho)*invZ
-    stagN2 = trace(n2*rho)*invZ
-    stagchi = L*beta*(stagN2-stagN^2)
+    nstag = ef.vectors' * orderparameter(solver,true) * ef.vectors
+    stagN = trace(nstag*rho)*invZ
+    stagN2 = trace(nstag*nstag*rho)*invZ
 
+    chi = 0.0
+    stagchi = 0.0
+    dt = beta/ntau_integral
+    U1 = similar(n)
+    U2 = similar(n)
+    for it in 1:ntau_integral
+        t1 = dt*(it-1)
+        t2 = beta-t1
+        U1 .= diagm(exp.(-t1.*ef.values))
+        U2 .= diagm(exp.(-t2.*ef.values))
+        chi += invZ*trace(U2*n*U1*n)
+        stagchi += invZ*trace(U2*nstag*U1*nstag)
+    end
+    chi *= dt
+    chi -= beta*N^2
+    chi *= L
+    stagchi *= dt
+    stagchi -= beta*stagN^2
+    stagchi *= L
+
+    ## structure factor and green's function
     for it in 1:ntau
         t1 = beta*((it-1)/ntau)
         t2 = beta-t1
-        U1 = ef.vectors * diagm(exp.(-t1.*ef.values)) * ef.vectors'
-        U2 = ef.vectors * diagm(exp.(-t2.*ef.values)) * ef.vectors'
+        U1 .= ef.vectors * diagm(exp.(-t1.*ef.values)) * ef.vectors'
+        U2 .= ef.vectors * diagm(exp.(-t2.*ef.values)) * ef.vectors'
         for i in 1:L
             sf = U2*basis(solver,i)*U1
             gfca = U2*creator(solver,i)*U1
@@ -66,14 +85,13 @@ function solve(solver::Solver, beta::Real, ntau::Integer)
             end
         end
     end
+
     V2 = L*L
     return Dict("Energy"=>E, "Total Energy"=>E*L,
                 "Energy^2"=>E2, "Total Energy^2"=>E2*V2,
                 "Specific Heat"=>C, "Heat Capacity"=>C*L,
-                "Order Parameter"=>N, "Order Parameter^2"=>N2,
-                "Susceptibility"=>chi,
-                "Staggered Order Parameter"=>stagN, "Staggered Order Parameter^2"=>stagN2,
-                "Staggered Susceptibility"=>stagchi,
+                "Order Parameter"=>N, "Susceptibility"=>chi,
+                "Staggered Order Parameter"=>stagN, "Staggered Susceptibility"=>stagchi,
                 "Structure Factor"=>SF,
                 "Temperature Green's Function ca in r"=>GF_ca,
                 "Temperature Green's Function ac in r"=>GF_ac,
