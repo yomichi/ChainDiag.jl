@@ -47,7 +47,7 @@ function magnetization(S::Real,L::Integer,staggered::Bool=false)
     return diagm(res)
 end
 
-function spinchain(S::Real, L::Integer, Jz::Real, Jxy::Real, h::Real, G::Real)
+function spinchain(S::Real, L::Integer, Jz::Real, Jxy::Real, h::Real, Guni::Real, Gstag::Real)
     S2 = Int(2S)
     ld = ldof(S)
     sz = Sz(S)
@@ -56,14 +56,19 @@ function spinchain(S::Real, L::Integer, Jz::Real, Jxy::Real, h::Real, G::Real)
     sx = 0.5.*(sp.+sm)
     jxy = 0.5Jxy
 
-    onsite = (-0.5h) .* sz .+ (-0.5G) .* sx
-    bondH = Jz.*kron(sz,sz) .+ jxy.*(kron(sp,sm) .+ kron(sm,sp)) .+ kron(onsite, eye(ld)) .+ kron(eye(ld), onsite)
+    G = [-(Guni+Gstag), -(Guni-Gstag)]
+    onsite = [ (-h) .* sz .+ G[i] .* sx for i in 1:2]
+
     N = ld^L
-    H = Jz.*kron(sz, kron(eye(div(N,ld*ld)), sz))
+    H = zeros(N,N)
+    for i=1:L
+        H .+ kron(eye(ld^(i-1)), kron(onsite[mod1(i,2)], eye(ld^(L-i))))
+    end
+
+    bondH = Jz.*kron(sz,sz) .+ jxy.*(kron(sp,sm) .+ kron(sm,sp))
+    H .+= Jz.*kron(sz, kron(eye(div(N,ld*ld)), sz))
     H .+= jxy .* kron(sm, kron(eye(div(N,ld*ld)), sp))
     H .+= jxy .* kron(sp, kron(eye(div(N,ld*ld)), sm))
-    H .+= kron(onsite, eye(div(N,ld)))
-    H .+= kron(eye(div(N,ld)), onsite)
 
     leftN = 1
     rightN = ld^(L-2)
@@ -80,22 +85,20 @@ doc"""
 """
 struct SpinChainSolver <: Solver
     ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
-    S :: Float64
-    L :: Int
+    S  :: Float64
+    L  :: Int
     function SpinChainSolver(S::Real, L::Integer
                              ;
-                             Jz::Real=1.0, Jxy::Real=1.0,
-                             h::Real=0.0, G::Real=0.0
-                            )
-        new(eigfact(spinchain(S, L, Jz, Jxy, h, G)), S, L)
+                             Jz::Real = 1.0, Jxy::Real = 1.0,
+                             h::Real = 0.0,
+                             Guni::Real = 0.0, Gstag::Real = 0.0)
+        new(eigfact(spinchain(S, L, Jz, Jxy, h, Guni, Gstag)), S, L)
     end
-end
-
+end 
 creator(solver::SpinChainSolver) = Sp(solver.S)
 creator(solver::SpinChainSolver, i::Integer) = Sp(solver.S, solver.L, i)
 annihilator(solver::SpinChainSolver) = Sm(solver.S)
 annihilator(solver::SpinChainSolver, i::Integer) = Sm(solver.S, solver.L, i)
 basis(solver::SpinChainSolver) = Sz(solver.S)
 basis(solver::SpinChainSolver, i::Integer) = Sz(solver.S, solver.L, i)
-orderparameter(solver::SpinChainSolver, staggered::Bool=false) = magnetization(solver.S, solver.L, staggered)
-
+orderparameter(solver::SpinChainSolver, staggered::Bool = false) = magnetization(solver.S, solver.L, staggered)

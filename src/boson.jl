@@ -46,7 +46,10 @@ function numberdensity(M::Integer,L::Integer,staggered::Bool=false)
     return diagm(res)
 end
 
-function bosonchain(M::Integer, L::Integer, t::Real, V::Real, U::Real, mu::Real, G::Real)
+function bosonchain(M::Integer, L::Integer,
+                    t::Real, V::Real, U::Real,
+                    mu::Real,
+                    Guni::Real, Gstag::Real)
     ld = M+1
     c = creator(M)
     a = annihilator(M)
@@ -54,15 +57,18 @@ function bosonchain(M::Integer, L::Integer, t::Real, V::Real, U::Real, mu::Real,
     n = number(M)
     i = eye(ld)
 
-    onsite = (-0.5mu).*n .+ (0.5U).*n.*(n.-1.0) .- G.*x
-    bondH = V.*kron(n,n) .- t.*(kron(c,a) .+ kron(a,c)) .+ kron(onsite,i) .+ kron(i,onsite)
+    G  = [-(Guni+Gstag), -(Guni-Gstag)]
+    onsite = [-mu.*n .+ U.*n.*(n.-1.0) .+ G[i].*x for i in 1:2]
+    bondH = V.*kron(n,n) .- t.*(kron(c,a) .+ kron(a,c))
 
     N = ld^L
-    H = V.*kron(n, kron(eye(div(N,ld*ld)), n))
+    H = zeros(N,N)
+    for i in 1:L
+        H .+= kron(eye(ld^(i-1)), kron(onsite[mod1(i,2)], eye(ld^(L-i))))
+    end
+    H .+= V.*kron(n, kron(eye(div(N,ld*ld)), n))
     H .-= t .* kron(c, kron(eye(div(N,ld*ld)), a))
     H .-= t .* kron(a, kron(eye(div(N,ld*ld)), c))
-    H .+= kron(onsite, eye(div(N,ld)))
-    H .+= kron(eye(div(N,ld)), onsite)
 
     leftN = 1
     rightN = ld^(L-2)
@@ -84,9 +90,9 @@ struct BosonChainSolver <: Solver
     function BosonChainSolver(M::Integer, L::Integer
                               ;
                               t::Real=1.0, V::Real=0.0, U::Real=0.0,
-                              mu::Real=0.0, G::Real=0.0
+                              mu::Real=0.0, Guni::Real=0.0, Gstag::Real=0.0,
                              )
-        new(eigfact(bosonchain(M, L, t, V, U, mu, G)), M, L)
+        new(eigfact(bosonchain(M, L, t, V, U, mu, Guni, Gstag)), M, L)
     end
 end
 
