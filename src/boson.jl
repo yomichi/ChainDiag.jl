@@ -1,7 +1,7 @@
 # @inline ldof(S) = Int(2S+1)
 function creator(M::Integer)
     ret = Float64[sqrt(m) for m in M:-1:1]
-    return diagm(ret,1)
+    return diagm(1=>ret)
 end
 function creator(M::Integer, L::Integer, i::Integer)
     ld = M+1
@@ -12,7 +12,7 @@ end
 
 function annihilator(M::Integer)
     ret = Float64[sqrt(m+1) for m in M-1:-1:0]
-    return diagm(ret,-1)
+    return diagm(-1=>ret)
 end
 function annihilator(M::Integer, L::Integer, i::Integer)
     ld = M+1
@@ -23,7 +23,7 @@ end
 
 function number(M::Integer)
     ret = Float64[m for m in M:-1:0]
-    return diagm(ret)
+    return diagm(0=>ret)
 end
 function number(M::Integer, L::Integer, i::Integer)
     ld = M+1
@@ -38,12 +38,12 @@ function numberdensity(M::Integer,L::Integer,staggered::Bool=false)
     n = number(M)
     res = zeros(N)
     for i in 1:N
-        for (j,m) in enumerate(digits(i-1,ld,L))
+        for (j,m) in enumerate(digits(i-1,base=ld,pad=L))
             res[i] += n[m+1,m+1] * ifelse(staggered && iseven(j), -1.0, 1.0)
         end
     end
     res .*= 1.0/L
-    return diagm(res)
+    return diagm(0=>res)
 end
 
 function bosonchain(M::Integer, L::Integer,
@@ -84,7 +84,7 @@ doc"""
 \mathcal{H} = -t\sum_i(a_i c_{i+1} + c_i a_{i+1}) + V\sum_i n_i n_{i+1} + U \sum_i n_i(n_i-1) - mu \sum_i n_i - G \sum_i (c_i + a_i)
 """
 struct BosonChainSolver <: Solver
-    ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
+    ef :: Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     M :: Int
     L :: Int
     function BosonChainSolver(M::Integer, L::Integer
@@ -92,7 +92,7 @@ struct BosonChainSolver <: Solver
                               t::Real=1.0, V::Real=0.0, U::Real=0.0,
                               mu::Real=0.0, Guni::Real=0.0, Gstag::Real=0.0,
                              )
-        new(eigfact(bosonchain(M, L, t, V, U, mu, Guni, Gstag)), M, L)
+        new(eigen(bosonchain(M, L, t, V, U, mu, Guni, Gstag)), M, L)
     end
 end
 

@@ -29,16 +29,16 @@ function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer
     E2 *= invZ
     C = L*beta^2*(E2-E^2)
 
-    rho = diagm(exp.(-beta.*ef.values))
+    rho = diagm(0=>exp.(-beta.*ef.values))
     n = ef.vectors' * orderparameter(solver) * ef.vectors
     n2 = n*n
-    N = trace(n*rho)*invZ
-    N2 = trace(n2*rho)*invZ
+    N = tr(n*rho)*invZ
+    N2 = tr(n2*rho)*invZ
     chi = L*beta*(N2-N^2)
 
     nstag = ef.vectors' * orderparameter(solver,true) * ef.vectors
-    stagN = trace(nstag*rho)*invZ
-    stagN2 = trace(nstag*nstag*rho)*invZ
+    stagN = tr(nstag*rho)*invZ
+    stagN2 = tr(nstag*nstag*rho)*invZ
 
     chi = 0.0
     stagchi = 0.0
@@ -48,10 +48,10 @@ function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer
     for it in 1:ntau_integral
         t1 = dt*(it-1)
         t2 = beta-t1
-        U1 .= diagm(exp.(-t1.*ef.values))
-        U2 .= diagm(exp.(-t2.*ef.values))
-        chi += invZ*trace(U2*n*U1*n)
-        stagchi += invZ*trace(U2*nstag*U1*nstag)
+        U1 .= diagm(0=>exp.(-t1.*ef.values))
+        U2 .= diagm(0=>exp.(-t2.*ef.values))
+        chi += invZ*tr(U2*n*U1*n)
+        stagchi += invZ*tr(U2*nstag*U1*nstag)
     end
     chi *= dt
     chi -= beta*N^2
@@ -64,15 +64,15 @@ function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer
     for it in 1:ntau
         t1 = beta*((it-1)/ntau)
         t2 = beta-t1
-        U1 .= ef.vectors * diagm(exp.(-t1.*ef.values)) * ef.vectors'
-        U2 .= ef.vectors * diagm(exp.(-t2.*ef.values)) * ef.vectors'
+        U1 .= ef.vectors * diagm(0=>exp.(-t1.*ef.values)) * ef.vectors'
+        U2 .= ef.vectors * diagm(0=>exp.(-t2.*ef.values)) * ef.vectors'
         for i in 1:L
             sf = U2*basis(solver,i)*U1
             gfca = U2*creator(solver,i)*U1
             gfac = U2*annihilator(solver,i)*U1
-            ss = invZ * trace(sf * basis(solver,1))
-            GF_ca[it, mod(i-1,L)+1] = -invZ * trace(gfca * annihilator(solver,1))
-            GF_ac[it, mod(i-1,L)+1] = -invZ * trace(gfac * creator(solver,1))
+            ss = invZ * tr(sf * basis(solver,1))
+            GF_ca[it, mod(i-1,L)+1] = -invZ * tr(gfca * annihilator(solver,1))
+            GF_ac[it, mod(i-1,L)+1] = -invZ * tr(gfac * creator(solver,1))
             for (ik,k) in enumerate(0:2:L)
                 fourier_factor = cospi(k*invV*(i-1))
                 SF[it,ik] += fourier_factor * ss
