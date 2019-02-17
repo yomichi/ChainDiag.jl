@@ -38,7 +38,7 @@ function numberdensity(M::Integer,L::Integer,staggered::Bool=false)
     n = number(M)
     res = zeros(N)
     for i in 1:N
-        for (j,m) in enumerate(digits(i-1,ld,L))
+        for (j,m) in enumerate(digits(i-1,base=ld,pad=L))
             res[i] += n[m+1,m+1] * ifelse(staggered && iseven(j), -1.0, 1.0)
         end
     end
@@ -92,7 +92,7 @@ struct BosonChainSolver <: Solver
                               t::Real=1.0, V::Real=0.0, U::Real=0.0,
                               mu::Real=0.0, Guni::Real=0.0, Gstag::Real=0.0,
                              )
-        new(eigfact(bosonchain(M, L, t, V, U, mu, Guni, Gstag)), M, L)
+        new(eigen(bosonchain(M, L, t, V, U, mu, Guni, Gstag)), M, L)
     end
 end
 

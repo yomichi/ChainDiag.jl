@@ -39,7 +39,7 @@ function magnetization(S::Real,L::Integer,staggered::Bool=false)
     N = ld^L
     res = zeros(N)
     for i in 1:N
-        for (j,m) in enumerate(digits(i-1,ld,L))
+        for (j,m) in enumerate(digits(i-1,base=ld,pad=L))
             res[i] += sz[m+1,m+1] * ifelse(staggered && iseven(j), -1.0, 1.0)
         end
     end
@@ -92,7 +92,7 @@ struct SpinChainSolver <: Solver
                              Jz::Real = 1.0, Jxy::Real = 1.0,
                              h::Real = 0.0,
                              Guni::Real = 0.0, Gstag::Real = 0.0)
-        new(eigfact(spinchain(S, L, Jz, Jxy, h, Guni, Gstag)), S, L)
+        new(eigen(spinchain(S, L, Jz, Jxy, h, Guni, Gstag)), S, L)
     end
 end 
 creator(solver::SpinChainSolver) = Sp(solver.S)

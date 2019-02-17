@@ -32,13 +32,13 @@ function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer
     rho = diagm(0=>exp.(-beta.*ef.values))
     n = ef.vectors' * orderparameter(solver) * ef.vectors
     n2 = n*n
-    N = trace(n*rho)*invZ
-    N2 = trace(n2*rho)*invZ
+    N = tr(n*rho)*invZ
+    N2 = tr(n2*rho)*invZ
     chi = L*beta*(N2-N^2)
 
     nstag = ef.vectors' * orderparameter(solver,true) * ef.vectors
-    stagN = trace(nstag*rho)*invZ
-    stagN2 = trace(nstag*nstag*rho)*invZ
+    stagN = tr(nstag*rho)*invZ
+    stagN2 = tr(nstag*nstag*rho)*invZ
 
     chi = 0.0
     stagchi = 0.0
@@ -50,8 +50,8 @@ function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer
         t2 = beta-t1
         U1 .= diagm(0=>exp.(-t1.*ef.values))
         U2 .= diagm(0=>exp.(-t2.*ef.values))
-        chi += invZ*trace(U2*n*U1*n)
-        stagchi += invZ*trace(U2*nstag*U1*nstag)
+        chi += invZ*tr(U2*n*U1*n)
+        stagchi += invZ*tr(U2*nstag*U1*nstag)
     end
     chi *= dt
     chi -= beta*N^2
@@ -70,9 +70,9 @@ function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer
             sf = U2*basis(solver,i)*U1
             gfca = U2*creator(solver,i)*U1
             gfac = U2*annihilator(solver,i)*U1
-            ss = invZ * trace(sf * basis(solver,1))
-            GF_ca[it, mod(i-1,L)+1] = -invZ * trace(gfca * annihilator(solver,1))
-            GF_ac[it, mod(i-1,L)+1] = -invZ * trace(gfac * creator(solver,1))
+            ss = invZ * tr(sf * basis(solver,1))
+            GF_ca[it, mod(i-1,L)+1] = -invZ * tr(gfca * annihilator(solver,1))
+            GF_ac[it, mod(i-1,L)+1] = -invZ * tr(gfac * creator(solver,1))
             for (ik,k) in enumerate(0:2:L)
                 fourier_factor = cospi(k*invV*(i-1))
                 SF[it,ik] += fourier_factor * ss
