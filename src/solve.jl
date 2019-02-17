@@ -29,7 +29,7 @@ function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer
     E2 *= invZ
     C = L*beta^2*(E2-E^2)
 
-    rho = diagm(exp.(-beta.*ef.values))
+    rho = diagm(0=>exp.(-beta.*ef.values))
     n = ef.vectors' * orderparameter(solver) * ef.vectors
     n2 = n*n
     N = trace(n*rho)*invZ
@@ -48,8 +48,8 @@ function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer
     for it in 1:ntau_integral
         t1 = dt*(it-1)
         t2 = beta-t1
-        U1 .= diagm(exp.(-t1.*ef.values))
-        U2 .= diagm(exp.(-t2.*ef.values))
+        U1 .= diagm(0=>exp.(-t1.*ef.values))
+        U2 .= diagm(0=>exp.(-t2.*ef.values))
         chi += invZ*trace(U2*n*U1*n)
         stagchi += invZ*trace(U2*nstag*U1*nstag)
     end
@@ -64,8 +64,8 @@ function solve(solver::Solver, beta::Real, ntau::Integer, ntau_integral::Integer
     for it in 1:ntau
         t1 = beta*((it-1)/ntau)
         t2 = beta-t1
-        U1 .= ef.vectors * diagm(exp.(-t1.*ef.values)) * ef.vectors'
-        U2 .= ef.vectors * diagm(exp.(-t2.*ef.values)) * ef.vectors'
+        U1 .= ef.vectors * diagm(0=>exp.(-t1.*ef.values)) * ef.vectors'
+        U2 .= ef.vectors * diagm(0=>exp.(-t2.*ef.values)) * ef.vectors'
         for i in 1:L
             sf = U2*basis(solver,i)*U1
             gfca = U2*creator(solver,i)*U1

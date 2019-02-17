@@ -2,7 +2,7 @@
 function Sp(S::Real)
     S2 = Int(2S)
     ret = [0.5sqrt((S2-m2)*(S2+m2+2) ) for m2 in (S2-2):-2:(-S2)]
-    return diagm(ret,1)
+    return diagm(1=>ret)
 end
 function Sp(S::Real, L::Integer, i::Integer)
     leftN = ldof(S)^(i-1)
@@ -13,7 +13,7 @@ end
 function Sm(S::Real)
     S2 = Int(2S)
     ret = [0.5sqrt((S2+m2)*(S2-m2+2) ) for m2 in (S2):-2:(-S2+2)]
-    return diagm(ret,-1)
+    return diagm(-1=>ret)
 end
 function Sm(S::Real, L::Integer, i::Integer)
     leftN = ldof(S)^(i-1)
@@ -24,7 +24,7 @@ end
 function Sz(S::Real)
     S2 = Int(2S)
     ret = [0.5m2 for m2 in S2:-2:-S2]
-    return diagm(ret)
+    return diagm(0=>ret)
 end
 function Sz(S::Real, L::Integer, i::Integer)
     leftN = ldof(S)^(i-1)
@@ -44,7 +44,7 @@ function magnetization(S::Real,L::Integer,staggered::Bool=false)
         end
     end
     res .*= 1.0/L
-    return diagm(res)
+    return diagm(0=>res)
 end
 
 function spinchain(S::Real, L::Integer, Jz::Real, Jxy::Real, h::Real, Guni::Real, Gstag::Real)
@@ -84,7 +84,7 @@ doc"""
 \mathcal{H} = Jz \sum_i(S^z_i S^z_{i+1}) + 0.5Jxy \sum_i(S^+_i S^-_{i+1} + h.c.) - h \sum_i S^z_i - G \sum_i S^x_i
 """
 struct SpinChainSolver <: Solver
-    ef :: Base.LinAlg.Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
+    ef :: Eigen{Float64, Float64, Matrix{Float64}, Vector{Float64}}
     S  :: Float64
     L  :: Int
     function SpinChainSolver(S::Real, L::Integer

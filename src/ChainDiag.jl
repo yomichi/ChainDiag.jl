@@ -2,6 +2,9 @@ __precompile__()
 
 module ChainDiag
 
+using Markdown
+using LinearAlgebra
+
 export SpinChainSolver, BosonChainSolver, solve
 
 abstract type Solver end
