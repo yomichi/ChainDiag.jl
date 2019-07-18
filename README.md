@@ -18,10 +18,7 @@ julia> using ChainDiag
 
 julia> M=1; L=6; t=1.0; V=0.0; U=0.0; mu=0.0;
 
-# hardcore Bose-Hubbard model
-# H = -\sum_{i=1}^6 [c_i a_{i+1} + a_i c_{i+1}]
 julia> solver = BosonChainSolver(M, L, t=t, V=V, U=U, mu=mu);
-# default parameters: t=1.0, V=U=mu=0.0
 
 julia> beta=10.0; ntau=10;
 
@@ -36,32 +33,32 @@ julia> res["Total Energy"]
 julia> res["Specific Heat"]
 0.04421188790391106
 
-julia> res["Order Parameter"] # particle density
-0.4999999999999998
+julia> res["Order Parameter"] # particle density n[ik]
+4-element Array{Float64,1}:
+  0.4999999999999998
+  4.1597255959636036e-17
+ -2.7248108013632085e-17
+ -1.142555719539883e-16
 
 julia> res["Susceptibility"] # for order parameter
-0.0155393999976694
+4-element Array{Float64,1}:
+ 0.015539399997731351
+ 0.08373077862492564
+ 0.11225195475203074
+ 0.4167919066060102
 
-julia> res["Staggered Order Parameter"]
--1.142555719539883e-16
-
-julia> res["Staggered Susceptibility"]
-4.984460600002333
-
-# structure factor for order parameter
-# S[itau,ik], where k = (ik-1)*pi/L and tau = beta*(itau-1)/ntau
-julia> res["Structure Factor"]
+julia> res["Structure Factor"] # S[itau,ik]
 10×4 Array{Float64,2}:
- 1.50155  0.166667     0.333333     0.498446
- 1.50155  0.0226205    0.0167645    0.0478126
- 1.50155  0.00307281   0.000868712  0.00610676
- 1.50155  0.000418025  4.94162e-5   0.000819932
- 1.50155  5.79739e-5   3.607e-6     0.000112829
- 1.50155  1.55311e-5   7.42208e-7   2.99855e-5
- 1.50155  5.79739e-5   3.607e-6     0.000112829
- 1.50155  0.000418025  4.94162e-5   0.000819932
- 1.50155  0.00307281   0.000868712  0.00610676
- 1.50155  0.0226205    0.0167645    0.0478126
+ 1.25155  0.166667     0.333333     0.498446
+ 1.25155  0.0226205    0.0167645    0.0478126
+ 1.25155  0.00307281   0.000868712  0.00610676
+ 1.25155  0.000418025  4.94162e-5   0.000819932
+ 1.25155  5.79739e-5   3.607e-6     0.000112829
+ 1.25155  1.55311e-5   7.42208e-7   2.99855e-5
+ 1.25155  5.79739e-5   3.607e-6     0.000112829
+ 1.25155  0.000418025  4.94162e-5   0.000819932
+ 1.25155  0.00307281   0.000868712  0.00610676
+ 1.25155  0.0226205    0.0167645    0.0478126
 
 julia> res["Temperature Green's Function ac in r"] # G[itau,ir] = - <a(ir,tau) c(1,0)>
 10×6 Array{Float64,2}:
