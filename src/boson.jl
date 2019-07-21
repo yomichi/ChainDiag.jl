@@ -32,14 +32,16 @@ function number(M::Integer, L::Integer, i::Integer)
     kron(eye(leftN), kron(number(M), eye(rightN)))
 end
 
-function numberdensity(M::Integer,L::Integer,staggered::Bool=false)
+function numberdensity(M::Integer,L::Integer,
+                       k::Integer=0)
     ld = M+1
     N = ld^L
     n = number(M)
     res = zeros(N)
+    invV = 1.0/L
     for i in 1:N
         for (j,m) in enumerate(digits(i-1,base=ld,pad=L))
-            res[i] += n[m+1,m+1] * ifelse(staggered && iseven(j), -1.0, 1.0)
+            res[i] += n[m+1,m+1] * cospi(k*invV*(j-1))
         end
     end
     res .*= 1.0/L
@@ -102,5 +104,5 @@ annihilator(solver::BosonChainSolver) = annihilator(solver.M)
 annihilator(solver::BosonChainSolver, i::Integer) = annihilator(solver.M, solver.L, i)
 basis(solver::BosonChainSolver) = number(solver.M)
 basis(solver::BosonChainSolver, i::Integer) = number(solver.M, solver.L, i)
-orderparameter(solver::BosonChainSolver, staggered::Bool=false) = numberdensity(solver.M, solver.L, staggered)
+orderparameter(solver::BosonChainSolver, k::Integer=0) = numberdensity(solver.M, solver.L, k)
 

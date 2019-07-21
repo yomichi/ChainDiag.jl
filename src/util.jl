@@ -1,1 +1,1 @@
-eye(n) = Matrix{Float64}(I,n,n)
+eye(N) = Matrix{Float64}(I, N, N)

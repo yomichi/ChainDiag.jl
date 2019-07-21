@@ -32,18 +32,19 @@ function Sz(S::Real, L::Integer, i::Integer)
     kron(eye(leftN), kron(Sz(S), eye(rightN)))
 end
 
-function magnetization(S::Real,L::Integer,staggered::Bool=false)
+function magnetization(S::Real,L::Integer,k::Integer=0)
     sz = Sz(S)
     S2 = Int(2S)
     ld = ldof(S)
     N = ld^L
     res = zeros(N)
+    invV = 1.0/L
     for i in 1:N
         for (j,m) in enumerate(digits(i-1,base=ld,pad=L))
-            res[i] += sz[m+1,m+1] * ifelse(staggered && iseven(j), -1.0, 1.0)
+            res[i] += sz[m+1,m+1] * cospi(k*invV*(j-1))
         end
     end
-    res .*= 1.0/L
+    res .*= invV
     return diagm(0=>res)
 end
 
@@ -101,4 +102,4 @@ annihilator(solver::SpinChainSolver) = Sm(solver.S)
 annihilator(solver::SpinChainSolver, i::Integer) = Sm(solver.S, solver.L, i)
 basis(solver::SpinChainSolver) = Sz(solver.S)
 basis(solver::SpinChainSolver, i::Integer) = Sz(solver.S, solver.L, i)
-orderparameter(solver::SpinChainSolver, staggered::Bool = false) = magnetization(solver.S, solver.L, staggered)
+orderparameter(solver::SpinChainSolver, k::Integer = 0) = magnetization(solver.S, solver.L, k)
